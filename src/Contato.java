@@ -4,9 +4,9 @@ public class Contato {
   private String email;
 
   public Contato(String nome, String telefone, String email) {
-    this.nome = nome;
+    setNome(nome);
     this.telefone = telefone;
-    this.email = email;
+    setEmail(email);
   }
   @Override
   public String toString() {
@@ -17,7 +17,10 @@ public class Contato {
     return nome;
   }
   public void setNome(String nome) {
-    this.nome = nome;
+    if (nome == null) throw new IllegalArgumentException("Nome não pode ser nulo.");
+    String n = nome.trim().replaceAll("\\s+", " ");
+    if (n.isEmpty()) throw new IllegalArgumentException("Nome não pode ser vazio.");
+    this.nome = n;
   }
   public String getTelefone() {
     return telefone;
@@ -29,7 +32,12 @@ public class Contato {
     return email;
   }
   public void setEmail(String email) {
-    this.email = email;
-
+    if (email == null) throw new IllegalArgumentException("E-mail não pode ser nulo.");
+    String e = email.trim();
+    if (!isValidEmail(e)) throw new IllegalArgumentException("E-mail inválido: " + e);
+    this.email = e;
+  }
+  private static boolean isValidEmail(String email) {
+    return email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
   }
 }

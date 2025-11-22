@@ -66,21 +66,17 @@ public class AgendaApplication {
                     }
                     break;
                 case "5":
-                    System.out.print("Nome do arquivo para salvar (ex: contatos.csv): ");
-                    String arquivoSalvar = sc.nextLine().trim();
                     try {
-                        manager.salvarContatosCSV(arquivoSalvar);
-                        System.out.println("Salvo em " + arquivoSalvar);
+                        manager.salvarContatosCSV("contatos.csv");
+                        System.out.println("Salvo em contatos.csv");
                     } catch (IOException e) {
                         System.out.println("Erro ao salvar: " + e.getMessage());
                     }
                     break;
                 case "6":
-                    System.out.print("Nome do arquivo para carregar (ex: contatos.csv): ");
-                    String arquivoCarregar = sc.nextLine().trim();
                     try {
-                        manager.carregarContatosCSV(arquivoCarregar);
-                        System.out.println("Carregado de " + arquivoCarregar);
+                        manager.carregarContatosCSV("contatos.csv");
+                        System.out.println("Carregado de contatos.csv");
                     } catch (IOException e) {
                         System.out.println("Erro ao carregar: " + e.getMessage());
                     }
@@ -94,7 +90,7 @@ public class AgendaApplication {
         }
 
         sc.close();
-        System.out.println("Encerrando.");
+        System.out.println("Encerrando...");
     }
 
 }
