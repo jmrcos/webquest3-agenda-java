@@ -5,91 +5,107 @@
 // 4. José Mateus da Silva Santos
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
-public class AgendaManager {
-  private List<Contato> contatos = new ArrayList<>();
-
-  private String normalizeName(String nome) {
-    if (nome == null) return "";
-    return nome.trim().replaceAll("\\s+", " ").toLowerCase();
-  }
-
-  public void adicionarContato(Contato contato) throws ContatoExistenteException {
-    String nomeNovoNorm = normalizeName(contato.getNome());
-    for (Contato c : contatos) {
-      if (normalizeName(c.getNome()).equals(nomeNovoNorm)) {
-        throw new ContatoExistenteException("Contato já existe: " + contato.getNome());
-      }
+public class AgendaManager implements GerenciadorContatos {
+    private Map<String, Contato> contatos = new HashMap<>();
+    private String normalizar(String nome) {
+        return nome == null ? "" : nome.trim().toLowerCase();
     }
-    contatos.add(contato);
-  }
 
-  public Contato buscarContato(String nome) throws ContatoNaoEncontradoException {
-    String nomeNorm = normalizeName(nome);
-    for (Contato c : contatos) {
-      if (normalizeName(c.getNome()).equals(nomeNorm)) {
-        return c;
-      }
-    }
-    throw new ContatoNaoEncontradoException("Contato não encontrado: " + nome);
-  }
+    @Override
+    public void adicionarContato(Contato contato) throws ContatoExistenteException {
+        String chave = normalizar(contato.getNome());
 
-  public void removerContato(String nome) throws ContatoNaoEncontradoException {
-    String nomeNorm = normalizeName(nome);
-    Iterator<Contato> it = contatos.iterator();
-    while (it.hasNext()) {
-      Contato c = it.next();
-      if (normalizeName(c.getNome()).equals(nomeNorm)) {
-        it.remove();
-        return;
-      }
-    }
-    throw new ContatoNaoEncontradoException("Contato não encontrado: " + nome);
-  }
-
-  public List<Contato> listarTodosContatos(){
-    return new ArrayList<>(contatos);
-  }
-
-  public List<Contato> listarContatosOrdenados() {
-    List<Contato> copia = new ArrayList<>(contatos);
-    Collections.sort(copia, Comparator.comparing(c -> c.getNome().toLowerCase()));
-    return copia;
-  }
-
-  public List<Contato> buscarPorDominioEmail(String dominio) {
-    if (dominio == null) return Collections.emptyList();
-    String d = dominio.toLowerCase();
-    if (d.startsWith("@")) d = d.substring(1);
-    List<Contato> resultado = new ArrayList<>();
-    for (Contato c : contatos) {
-      String email = c.getEmail();
-      if (email != null) {
-        int at = email.lastIndexOf('@');
-        if (at >= 0) {
-          String dom = email.substring(at + 1).toLowerCase();
-          if (dom.equals(d)) {
-            resultado.add(c);
-          }
+        if (contatos.containsKey(chave)) {
+            throw new ContatoExistenteException("Contato já existe: " + contato.getNome());
         }
-      }
-    }
-    return resultado;
-  }
 
-  public void carregarContatosCSV(String filename) throws IOException {
+        contatos.put(chave, contato);
+    }
+
+    @Override
+    public Contato buscarContato(String nome) throws ContatoNaoEncontradoException {
+        Contato c = contatos.get(normalizar(nome));
+        if (c == null) {
+            throw new ContatoNaoEncontradoException("Contato não encontrado: " + nome);
+        }
+        return c;
+    }
+
+    @Override
+    public void removerContato(String nome) throws ContatoNaoEncontradoException {
+        String chave = normalizar(nome);
+        if (!contatos.containsKey(chave)) {
+            throw new ContatoNaoEncontradoException("Contato não encontrado: " + nome);
+        }
+        contatos.remove(chave);
+    }
+
+    @Override
+    public List<Contato> listarTodosContatos() {
+        return new ArrayList<>(contatos.values());
+    }
+
+    @Override
+    public List<Contato> listarContatosOrdenados() {
+        List<Contato> lista = listarTodosContatos();
+        lista.sort(Comparator.comparing(c -> c.getNome().toLowerCase()));
+        return lista;
+    }
+
+    @Override
+    public List<Contato> buscarPorDominioEmail(String dominio) {
+        if (dominio == null) return Collections.emptyList();
+
+        String dom = dominio.toLowerCase().replace("@", "");
+
+        List<Contato> result = new ArrayList<>();
+
+        for (Contato c : contatos.values()) {
+            String email = c.getEmail().toLowerCase();
+            int arroba = email.lastIndexOf('@');
+
+            if (arroba != -1) {
+                String d = email.substring(arroba + 1);
+                if (d.equals(dom)) result.add(c);
+            }
+        }
+
+        return result;
+    }
+
+    @Override
+    public void salvarContatosCSV(String nomeArquivo) throws IOException {
+        Path caminho = Paths.get(nomeArquivo);
+
+        try (BufferedWriter bw = Files.newBufferedWriter(caminho, StandardCharsets.UTF_8)) {
+            bw.write("nome;telefone;email");
+            bw.newLine();
+
+            for (Contato c : contatos.values()) {
+                bw.write(
+                    String.join(";",
+                        c.getNome(),
+                        c.getTelefone(),
+                        c.getEmail()
+                    )
+                );
+                bw.newLine();
+            }
+        }
+    }
+
+    @Override
+    public void carregarContatosCSV(String filename) throws IOException {
     Path p = Paths.get(filename);
     List<String> lines = new ArrayList<>();
 
@@ -142,24 +158,4 @@ public class AgendaManager {
         }
     }
 }
-
-  public void salvarContatosCSV(String filename) throws IOException {
-    Path p = Paths.get(filename);
-    List<String> out = new ArrayList<>();
-    out.add("Nome; Telefone; Email");
-    for (Contato c : contatos) {
-        String linha = String.format("%s;%s;%s",
-            escape(c.getNome()), escape(c.getTelefone()), escape(c.getEmail()));
-        out.add(linha);
-    }
-    Files.write(p, out, StandardCharsets.UTF_8);
-  }
-
-  private String escape(String s) {
-    if (s == null) return "";
-    return s.replace("\\", "\\\\")
-            .replace(";", "\\;")
-            .replace(",", "\\,");
-  }
-
 }
